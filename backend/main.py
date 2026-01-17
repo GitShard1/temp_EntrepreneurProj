@@ -1,49 +1,73 @@
 import os
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from motor.motor_asyncio import AsyncIOMotorClient
 from pymongo import MongoClient
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
 load_dotenv()
 
-app = FastAPI()
+app = FastAPI(title="Divergence API")
 
-
-from pymongo.mongo_client import MongoClient
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 MONGO_USERNAME = os.getenv("MONGO_USERNAME")
 MONGO_PASSWORD = os.getenv("MONGO_PASSWORD")
 uri = F"mongodb+srv://{MONGO_USERNAME}:{MONGO_PASSWORD}@cluster0.ncuqrpz.mongodb.net/?appName=Cluster0"
 
-# Create a new client and connect to the server
-client = MongoClient(uri)
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    app.mongodb_client = AsyncIOMotorClient(uri)
+    app.mongodb = app.mongodb_client.divergence
+    print("Connected to MongoDB!")
 
-# Send a ping to confirm a successful connection
-try:
-    client.admin.command('ping')
-    print("Pinged your deployment. You successfully connected to MongoDB!")
-except Exception as e:
-    print(e)
+    yield
 
-# MongoDB connection (replace with your connection string)
-db = client["mydatabase"]
-collection = db["items"]
+    app.mongodb_client.close()
+    print("Disconnected from MongoDB")
 
-class Item(BaseModel):
-    name: str
-    description: str = None
+app = FastAPI(
+    title="Divergence API",
+    lifespan=lifespan
+)
 
+# CORS - allow Next.js frontend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Health check
 @app.get("/")
-def read_root():
-    return {"message": "Hello from FastAPI"}
-
-@app.post("/items/")
-def create_item(item: Item):
-    item_dict = item.dict()
-    result = collection.insert_one(item_dict)
-    return {"id": str(result.inserted_id), **item_dict}
-
-@app.get("/items/")
-def read_items():
-    items = list(collection.find({}, {"_id": 0}))
-    return {"items": items}
+async def root():
+    return {
+        "message": "Divergence API is running",
+        "status": "healthy"
+    }
+@app.get("/test-db")
+async def test_db():
+    """Test endpoint to verify MongoDB connection"""
+    try:
+        # Try to list collections
+        collections = await app.mongodb.list_collection_names()
+        return {
+            "status": "connected",
+            "database": "divergence",
+            "collections": collections
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": str(e)
+        }
