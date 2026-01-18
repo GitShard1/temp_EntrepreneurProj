@@ -71,3 +71,7 @@ async def test_db():
             "status": "error",
             "message": str(e)
         }
+    
+@app.post('/api/projects')
+def save_project():
+    pass

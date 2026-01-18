@@ -109,11 +109,12 @@ export default function AddProjectModal({ isOpen, onClose }: AddProjectModalProp
               </button>
               <button
                 type="button"
-                onClick={() => setMode('collab')}
-                className={`${styles.modeButton} ${mode === 'collab' ? styles.active : styles.inactive}`}
-              >
-                Team
-              </button>
+                disabled
+                className={`${styles.modeButton} ${styles.inactive}`}
+                style={{ opacity: 0.5, cursor: 'not-allowed' }}
+                >
+                Team (Coming Soon)
+                </button>
             </div>
           </div>
 

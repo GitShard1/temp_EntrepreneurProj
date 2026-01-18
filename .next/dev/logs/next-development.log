@@ -1,2 +1,8 @@
 [00:00:00.516] Server  LOG     ✓ Ready in 380ms
 [00:00:01.810] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:07:29.902] Browser ERROR   Error: {}
+[00:08:25.709] Browser LOG     Response: {"detail":"Not Found"}
+[00:08:41.104] Browser LOG     Response: {"detail":"Not Found"}
+[00:11:29.245] Browser LOG     Response: {"detail":"Not Found"}
+[00:40:21.737] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:43:57.363] Server  LOG     ✓ Compiled in 28ms
