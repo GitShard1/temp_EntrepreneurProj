@@ -6,6 +6,8 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from pymongo import MongoClient
 from pydantic import BaseModel
 from dotenv import load_dotenv
+from models.project import ProjectCreate
+import uuid
 
 load_dotenv()
 
@@ -55,23 +57,29 @@ async def root():
         "message": "Divergence API is running",
         "status": "healthy"
     }
-@app.get("/test-db")
-async def test_db():
-    """Test endpoint to verify MongoDB connection"""
-    try:
-        # Try to list collections
-        collections = await app.mongodb.list_collection_names()
-        return {
-            "status": "connected",
-            "database": "divergence",
-            "collections": collections
-        }
-    except Exception as e:
-        return {
-            "status": "error",
-            "message": str(e)
-        }
     
-@app.post('/api/projects')
-def save_project():
-    pass
+@app.post('/api/projects/create')
+async def create_project(project: ProjectCreate):
+    projects_collection = app.mongodb["projects"]
+    
+    project_id = str(uuid.uuid4())
+
+    project_data = {
+        "project_id": project_id,
+        "name": project.name,
+        "goal": project.goal,
+        "dueDate": project.dueDate,
+        "mode": project.mode,
+        "teamMembers": project.teamMembers,
+        "hasPM": project.hasPM,
+        "repoOption": project.repoOption,
+        "existingRepoUrl": project.existingRepoUrl
+    }
+
+    await projects_collection.insert_one(project_data)
+
+
+    return {
+        "projectId": project_id,
+        "status": "created"
+    }
