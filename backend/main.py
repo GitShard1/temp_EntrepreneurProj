@@ -6,6 +6,8 @@ from fastapi.responses import RedirectResponse, JSONResponse
 from pymongo import MongoClient
 from pydantic import BaseModel
 from dotenv import load_dotenv
+from models.project import ProjectCreate
+import uuid
 from jose import jwt
 
 load_dotenv()
