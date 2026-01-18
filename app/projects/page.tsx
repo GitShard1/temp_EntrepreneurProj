@@ -1,10 +1,10 @@
 'use client'
 
-import './globals.css'
-
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import AddProjectModal from '@/components/AddProjectModal'
+import { getAuthState, clearAuthState, getAuthHeader } from '@/lib/auth'
 
 const API_ENDPOINT = "http://localhost:8000"
 
@@ -27,28 +27,34 @@ export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
+  const router = useRouter()
 
   useEffect(() => {
     fetchProjects()
   }, [])
 
   const fetchProjects = async () => {
-    const username = localStorage.getItem('username')
-    const token = localStorage.getItem('auth_token')
+    const { username, isAuthenticated } = getAuthState()
     
-    if (!username || !token) {
-      window.location.href = '/'
+    if (!isAuthenticated) {
+      router.push('/')
       return
     }
 
     try {
       const res = await fetch(`${API_ENDPOINT}/get-filtered-data/${username}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: getAuthHeader()
       })
       
       if (res.ok) {
         const data = await res.json()
         setProjects(data.projects?.all || [])
+      } else if (res.status === 401) {
+        clearAuthState()
+        router.push('/')
+      } else if (res.status === 404) {
+        // No data found yet
+        setProjects([])
       }
     } catch (error) {
       console.error('Error fetching projects:', error)
