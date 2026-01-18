@@ -217,6 +217,12 @@ export default function ProfilePage() {
 
     const labels = userData.skillsRadar?.map(s => s.subject) || []
     const values = userData.skillsRadar?.map(s => s.score) || []
+    
+    // Ensure we have at least some data points for the radar to render
+    // If all values are 0, add a tiny value to make the web visible
+    const displayValues = values.every(v => v === 0) 
+      ? values.map(() => 1) // Show minimal spider web with value 1
+      : values
 
     // @ts-ignore - Chart.js types
     chartInstanceRef.current = new Chart(ctx, {
@@ -225,7 +231,7 @@ export default function ProfilePage() {
         labels,
         datasets: [{
           label: 'Skills',
-          data: values,
+          data: displayValues,
           backgroundColor: 'rgba(46, 160, 67, 0.3)',
           borderColor: '#2ea043',
           borderWidth: 2,
@@ -241,13 +247,18 @@ export default function ProfilePage() {
         scales: {
           r: {
             beginAtZero: true,
+            min: 0,
             max: 100,
             ticks: { 
               stepSize: 20, 
               color: '#8b949e', 
-              backdropColor: 'transparent' 
+              backdropColor: 'transparent',
+              display: true
             },
-            grid: { color: '#30363d' },
+            grid: { 
+              color: '#30363d',
+              display: true
+            },
             pointLabels: { 
               color: '#8b949e', 
               font: { size: 12 } 
