@@ -99,6 +99,15 @@ button:focus-visible {
     color: #ffffff;
 }
 
+.nav-username {
+    color: #58a6ff;
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+    background-color: rgba(88, 166, 255, 0.1);
+    border-radius: 4px;
+    font-size: 0.95rem;
+}
+
 /* =========================================================
    Typography
    ========================================================= */

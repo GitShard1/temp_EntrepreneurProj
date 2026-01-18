@@ -1,10 +1,11 @@
 'use client'
 
-import './globals.css'
 
 import { useState, useEffect, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import Script from 'next/script'
+import { getAuthState, clearAuthState, getAuthHeader } from '@/lib/auth'
 
 const API_ENDPOINT = "http://localhost:8000"
 
@@ -32,6 +33,7 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true)
   const chartRef = useRef<HTMLCanvasElement>(null)
   const chartInstanceRef = useRef<any>(null)
+  const router = useRouter()
 
   useEffect(() => {
     fetchUserData()
@@ -50,22 +52,46 @@ export default function ProfilePage() {
   }, [userData])
 
   const fetchUserData = async () => {
-    const username = localStorage.getItem('username')
-    const token = localStorage.getItem('auth_token')
+    const { username, token, isAuthenticated } = getAuthState()
     
-    if (!username || !token) {
-      window.location.href = '/'
+    if (!isAuthenticated) {
+      router.push('/')
       return
     }
 
     try {
-      const res = await fetch(`${API_ENDPOINT}/get-filtered-data/${username}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+      const res = await fetch(`${API_ENDPOINT}/get-translated-data/${username}`, {
+        headers: getAuthHeader()
       })
       
       if (res.ok) {
         const data = await res.json()
+        console.log('Received data:', data) // Debug log to see structure
         setUserData(data)
+      } else if (res.status === 401) {
+        clearAuthState()
+        router.push('/')
+      } else if (res.status === 404) {
+        // No translated data available - try to get user info from GitHub
+        const userRes = await fetch(`${API_ENDPOINT}/auth/github/user`, {
+          headers: getAuthHeader()
+        })
+        if (userRes.ok) {
+          const githubUser = await userRes.json()
+          // Set minimal user data
+          setUserData({
+            profile: {
+              name: githubUser.name || username || 'Unknown User',
+              username: username || 'unknown',
+              avatarUrl: githubUser.avatar_url || '',
+              bio: githubUser.bio || 'No bio available'
+            },
+            skills: { radar: [] },
+            languages: [],
+            frameworks: [],
+            libraries: []
+          })
+        }
       }
     } catch (error) {
       console.error('Error fetching data:', error)
@@ -75,7 +101,7 @@ export default function ProfilePage() {
   }
 
   const renderRadarChart = () => {
-    if (!chartRef.current || !userData) return
+    if (!chartRef.current || !userData || !userData.skills?.radar) return
     
     // @ts-ignore - Chart.js loaded via CDN
     if (typeof Chart === 'undefined') return
@@ -148,7 +174,9 @@ export default function ProfilePage() {
       <>
         <Script src="https://cdn.jsdelivr.net/npm/chart.js" strategy="beforeInteractive" />
         <Navbar />
-        <div className="profile-container">No data available</div>
+        <div className="profile-container">
+          <p>No profile data available. Please process your GitHub data first.</p>
+        </div>
       </>
     )
   }
@@ -172,13 +200,13 @@ export default function ProfilePage() {
             <div className="profile-card">
               <div className="profile-card-content">
                 <img 
-                  src={userData.profile.avatarUrl} 
-                  alt={userData.profile.name} 
+                  src={userData.profile?.avatarUrl || '/default-avatar.png'} 
+                  alt={userData.profile?.name || 'User'} 
                   className="profile-picture" 
                 />
-                <h2 className="profile-name">{userData.profile.name}</h2>
-                <p className="profile-username">@{userData.profile.username}</p>
-                <p className="profile-bio">{userData.profile.bio}</p>
+                <h2 className="profile-name">{userData.profile?.name || 'Unknown'}</h2>
+                <p className="profile-username">@{userData.profile?.username || 'unknown'}</p>
+                <p className="profile-bio">{userData.profile?.bio || 'No bio available'}</p>
               </div>
             </div>
           </aside>
@@ -186,53 +214,61 @@ export default function ProfilePage() {
           {/* Main Content */}
           <main className="profile-main">
             {/* Skills Radar */}
-            <section className="skills-section">
-              <h3>Skills Overview</h3>
-              <h4>Chart of all the repositories into a comprehensive developer profile</h4>
-              <div className="chart-container">
-                <canvas ref={chartRef} id="skillsChart"></canvas>
-              </div>
-            </section>
+            {userData.skills?.radar && userData.skills.radar.length > 0 && (
+              <section className="skills-section">
+                <h3>Skills Overview</h3>
+                <h4>Chart of all the repositories into a comprehensive developer profile</h4>
+                <div className="chart-container">
+                  <canvas ref={chartRef} id="skillsChart"></canvas>
+                </div>
+              </section>
+            )}
 
             {/* Languages */}
-            <section className="languages-section">
-              <h3>Programming Languages</h3>
-              <h4>Percentage of usage in each language</h4>
-              <div className="languages-grid">
-                {userData.languages.map((lang, idx) => (
-                  <div key={idx} className="language-item">
-                    <span 
-                      className="language-dot" 
-                      style={{ backgroundColor: lang.color }}
-                    ></span>
-                    <span className="language-name">{lang.name}</span>
-                    <span className="language-percentage">{lang.percentage}%</span>
-                  </div>
-                ))}
-              </div>
-            </section>
+            {userData.languages && userData.languages.length > 0 && (
+              <section className="languages-section">
+                <h3>Programming Languages</h3>
+                <h4>Percentage of usage in each language</h4>
+                <div className="languages-grid">
+                  {userData.languages.map((lang, idx) => (
+                    <div key={idx} className="language-item">
+                      <span 
+                        className="language-dot" 
+                        style={{ backgroundColor: lang.color }}
+                      ></span>
+                      <span className="language-name">{lang.name}</span>
+                      <span className="language-percentage">{lang.percentage}%</span>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
 
             {/* Frameworks */}
-            <section className="frameworks-section">
-              <h3>Frameworks</h3>
-              <h4>Frameworks Frequency</h4>
-              <div className="tags-container">
-                {userData.frameworks.map((fw, idx) => (
-                  <span key={idx} className="tag tag-purple">{fw}</span>
-                ))}
-              </div>
-            </section>
+            {userData.frameworks && userData.frameworks.length > 0 && (
+              <section className="frameworks-section">
+                <h3>Frameworks</h3>
+                <h4>Frameworks Frequency</h4>
+                <div className="tags-container">
+                  {userData.frameworks.map((fw, idx) => (
+                    <span key={idx} className="tag tag-purple">{fw}</span>
+                  ))}
+                </div>
+              </section>
+            )}
 
             {/* Libraries */}
-            <section className="libraries-section">
-              <h3>Libraries</h3>
-              <h4>Libraries & Tools use frequency</h4>
-              <div className="tags-container">
-                {userData.libraries.map((lib, idx) => (
-                  <span key={idx} className="tag tag-green">{lib}</span>
-                ))}
-              </div>
-            </section>
+            {userData.libraries && userData.libraries.length > 0 && (
+              <section className="libraries-section">
+                <h3>Libraries</h3>
+                <h4>Libraries & Tools use frequency</h4>
+                <div className="tags-container">
+                  {userData.libraries.map((lib, idx) => (
+                    <span key={idx} className="tag tag-green">{lib}</span>
+                  ))}
+                </div>
+              </section>
+            )}
           </main>
         </div>
       </div>
