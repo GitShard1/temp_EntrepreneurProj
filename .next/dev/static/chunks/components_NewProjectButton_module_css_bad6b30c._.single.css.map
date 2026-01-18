@@ -1,6 +1,0 @@
-{
-  "version": 3,
-  "sources": [],
-  "sections": [
-    {"offset": {"line": 1, "column": 0}, "map": {"version":3,"sources":["turbopack:///[project]/components/NewProjectButton.module.css"],"sourcesContent":[".button {\n  background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);\n  color: white;\n  padding: 1rem 2rem;\n  border-radius: 0.75rem;\n  font-size: 1.125rem;\n  font-weight: 600;\n  border: none;\n  cursor: pointer;\n  box-shadow: 0 10px 25px rgba(37, 99, 235, 0.3);\n  transition: all 0.3s ease;\n  font-family: inherit;\n}\n\n.button:hover {\n  transform: translateY(-2px);\n  box-shadow: 0 15px 35px rgba(37, 99, 235, 0.4);\n  background: linear-gradient(135deg, #1d4ed8 0%, #6d28d9 100%);\n}\n\n.button:active {\n  transform: translateY(0);\n  box-shadow: 0 5px 15px rgba(37, 99, 235, 0.3);\n}"],"names":[],"mappings":"AAAA;;;;;;;;;;;;;;AAcA;;;;;;AAMA"}}]
-}

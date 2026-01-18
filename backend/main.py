@@ -94,10 +94,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Serve HTML files from app/UI directory
-ui_path = Path(__file__).parent.parent / "app" / "UI"
-app.mount("/ui", StaticFiles(directory=str(ui_path), html=True), name="ui")
-
 """
 # Health check
 @app.get("/")
@@ -407,11 +403,106 @@ async def get_filtered_data(github_username: str, current_user: str = Depends(ge
     if current_user != github_username:
         raise HTTPException(status_code=403, detail="You can only access your own data")
     
-    filtered_file = Path(__file__).parent / f"translation_{github_username}" / "filtered.json"
+    # Look in the translation directory
+    filtered_file = Path(__file__).parent / "translation" / "filtered.json"
     
-    if filtered_file.exists():
-        with open(filtered_file, 'r') as f:
+    if not filtered_file.exists():
+        raise HTTPException(status_code=404, detail="No filtered data found for this user")
+    
+    try:
+        with open(filtered_file, 'r', encoding='utf-8') as f:
             filtered_data = json.load(f)
+        
+        # Get user info from MongoDB to fill in profile data
+        user = await app.users_collection.find_one({"username": github_username})
+        
+        # Ensure the data has the expected structure for the frontend
+        if not filtered_data.get("profile"):
+            filtered_data["profile"] = {}
+        
+        # Fill in profile data from MongoDB if available
+        if user:
+            filtered_data["profile"]["avatar"] = filtered_data["profile"].get("avatar") or user.get("avatar_url", "")
+            filtered_data["profile"]["nameUser"] = filtered_data["profile"].get("nameUser") or user.get("username")
+            filtered_data["profile"]["username"] = github_username
+        
+        # Ensure other required fields exist
+        if "statsHome" not in filtered_data:
+            filtered_data["statsHome"] = {
+                "totalProjects": 0,
+                "totalRating": 0.0,
+                "totalLanguages": 0
+            }
+        
+        if "projects" not in filtered_data:
+            filtered_data["projects"] = {"top": [], "new": []}
+        
+        if "recentWorks" not in filtered_data:
+            filtered_data["recentWorks"] = []
+        
         return JSONResponse(filtered_data)
+    except json.JSONDecodeError as e:
+        raise HTTPException(status_code=500, detail=f"Invalid JSON in filtered file: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error reading filtered data: {str(e)}")
+
+
+@app.get("/auth/github/user")
+async def get_current_github_user(current_user: str = Depends(get_current_user)):
+    """Get current authenticated user's GitHub profile from MongoDB"""
     
-    raise HTTPException(status_code=404, detail="No filtered data found for this user")
+    user = await app.users_collection.find_one({"username": current_user})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Remove MongoDB _id field
+    user.pop("_id", None)
+    return JSONResponse(user)
+
+
+@app.get("/get-translated-data/{github_username}")
+async def get_translated_data(github_username: str, current_user: str = Depends(get_current_user)):
+    """Get translated profile data for a GitHub user - reads from translated.json"""
+    
+    if current_user != github_username:
+        raise HTTPException(status_code=403, detail="You can only access your own data")
+    
+    # Look in the translation directory
+    translated_file = Path(__file__).parent / "translation" / "translated.json"
+    
+    if not translated_file.exists():
+        raise HTTPException(status_code=404, detail="No translated data found for this user")
+    
+    try:
+        with open(translated_file, 'r', encoding='utf-8') as f:
+            translated_data = json.load(f)
+        
+        # Get user info from MongoDB to fill in profile data
+        user = await app.users_collection.find_one({"username": github_username})
+        
+        # Ensure the data has the expected structure
+        if not translated_data.get("profile"):
+            translated_data["profile"] = {}
+        
+        # Fill in profile data from MongoDB if missing
+        if user:
+            translated_data["profile"]["name"] = translated_data["profile"].get("name") or user.get("username")
+            translated_data["profile"]["username"] = github_username
+            translated_data["profile"]["avatarUrl"] = translated_data["profile"].get("avatarUrl") or user.get("avatar_url", "")
+            translated_data["profile"]["bio"] = translated_data["profile"].get("bio") or "No bio available"
+        
+        # Ensure other required fields exist
+        if "skills" not in translated_data:
+            translated_data["skills"] = {"radar": []}
+        if "languages" not in translated_data:
+            translated_data["languages"] = []
+        if "frameworks" not in translated_data:
+            translated_data["frameworks"] = []
+        if "libraries" not in translated_data:
+            translated_data["libraries"] = []
+        
+        return JSONResponse(translated_data)
+    except json.JSONDecodeError as e:
+        raise HTTPException(status_code=500, detail=f"Invalid JSON in translated file: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error reading translated data: {str(e)}")

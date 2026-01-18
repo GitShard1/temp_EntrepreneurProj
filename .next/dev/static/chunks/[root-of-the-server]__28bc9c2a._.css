@@ -548,6 +548,15 @@ a:focus-visible, button:focus-visible {
   background-color: #ff6b6b;
 }
 
+.nav-username {
+  color: #58a6ff;
+  background-color: #58a6ff1a;
+  border-radius: 4px;
+  padding: .5rem 1rem;
+  font-size: .95rem;
+  font-weight: 500;
+}
+
 h1 {
   margin: 0 0 .25rem;
   font-size: 48px;
@@ -572,7 +581,7 @@ h4 {
 
 .SignInPage {
   background: radial-gradient(1200px 600px at 20% 10%, #e9ebef26, #0000 60%), radial-gradient(900px 500px at 80% 30%, #eceef21f, #0000 55%), #0d1117;
-  background: radial-gradient(1200px 600px at 20% 10%, lab(92.979% -.154048 -2.19058 / .15), #0000 60%), radial-gradient(900px 500px at 80% 30%, lab(94.1758% -.154406 -2.19268 / .12), #0000 55%), #0d1117;
+  background: radial-gradient(1200px 600px at 20% 10%, lab(92.979% -.154078 -2.19058 / .15), #0000 60%), radial-gradient(900px 500px at 80% 30%, lab(94.1758% -.154376 -2.19269 / .12), #0000 55%), #0d1117;
   place-items: center;
   min-height: 100vh;
   padding: 2.5rem 1.25rem;
